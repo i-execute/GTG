@@ -1,0 +1,49 @@
+name: schema-update
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: schema-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.4'
+      - run: go run ./cmd/tlgen -layer latest
+      - run: go test -p 1 ./... -count=1
+      - run: go vet -p 1 ./...
+      - id: diff
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="schema-update-$(date -u +%Y%m%d-%H%M%S)"
+          git checkout -b "$branch"
+          git add schema/telegram.lock.json internal/tlgen telegram
+          layer=$(python3 -c 'import json;print(json.load(open("schema/telegram.lock.json"))["layer"])')
+          git commit -m "schema: update TDLib layer to ${layer}"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "Schema update: TDLib layer ${layer}" \
+            --body "Automated TDLib schema refresh produced by cmd/tlgen -layer latest (GITHUB_TOKEN only). Review the schema diff before merging." \
+            --label schema
+        env:
+          GH_TOKEN: ${{ github.token }}

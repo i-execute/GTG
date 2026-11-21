@@ -1,0 +1,16 @@
+{
+  "schema_revision": "03220f6b3043c6fd7785fbf0901d63f19ad19974",
+  "layer": 233,
+  "schemas": [
+    {
+      "name": "telegram_api",
+      "source": "https://raw.githubusercontent.com/tdlib/td/03220f6b3043c6fd7785fbf0901d63f19ad19974/td/generate/scheme/telegram_api.tl",
+      "sha256": "89bf71464239646c233f0a2a3d77512c9be08e4a63eab362afba0b721f69a26d"
+    },
+    {
+      "name": "mtproto_api",
+      "source": "https://raw.githubusercontent.com/tdlib/td/03220f6b3043c6fd7785fbf0901d63f19ad19974/td/generate/scheme/mtproto_api.tl",
+      "sha256": "bde4942be06dc112dfc655e2a8aa5163a4e3aa0d859d7840cfc76ec3a00654c4"
+    }
+  ]
+}
