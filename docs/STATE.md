@@ -23,6 +23,7 @@
 - Corrected `EncryptedSession.Exchange` to retain service frames until the matching `rpc_result` arrives. The previous first-frame return could discard a valid later RPC response after an acknowledgement or other service frame.
 - Completed a controlled live bot run without persisting credentials. Bootstrap, encrypted ping, initialization, bot authorization, typed and dynamic config calls, get-me, session marshal/open, restored session use without a second bot login, and a send/edit/delete cycle in the supplied chat passed. `docs/LIVE.md` contains only non-secret results.
 - Split vault OS-dependent memory locking and file-lock behavior behind allowed build tags so session and vault paths cross-compile for Linux and Windows targets without cgo.
+- Ran `FuzzStoreOpen` for a bounded 30-second single-worker campaign under `GOGC=20`. It completed without a crash, failure, or persisted corpus addition; it is bounded malformed-input evidence, not an exhaustive security proof.
 
 ## Current work order
 
