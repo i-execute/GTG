@@ -16,6 +16,7 @@ const (
 	constructorPingDelayDisconnect uint32 = 0xf3427b8c
 	constructorPong                uint32 = 0x347773c5
 	constructorMessageContainer    uint32 = 0x73f1f8dc
+	constructorRPCResult           uint32 = 0xf35c6d01
 )
 
 var ErrEncrypted = errors.New("gtg: bootstrap encrypted exchange failed")
@@ -148,9 +149,11 @@ func (x *EncryptedSession) Exchange(ctx context.Context, body []byte) (uint64, [
 		if err != nil {
 			return 0, nil, err
 		}
+		var collected [][]byte
 		for attempts := 0; attempts < 8; attempts++ {
 			response, err := x.read()
 			if err != nil {
+				clearMessages(collected)
 				return requestID, nil, err
 			}
 			messages := unpackMessages(response)
@@ -160,10 +163,15 @@ func (x *EncryptedSession) Exchange(ctx context.Context, body []byte) (uint64, [
 			}
 			if x.acceptSalt(messages) {
 				clearMessages(messages)
+				clearMessages(collected)
 				break
 			}
-			return requestID, messages, nil
+			collected = append(collected, messages...)
+			if containsRPCResult(messages, requestID) {
+				return requestID, collected, nil
+			}
 		}
+		clearMessages(collected)
 	}
 	return requestID, nil, ErrEncrypted
 }
@@ -283,6 +291,15 @@ func clearMessages(values [][]byte) {
 	for _, value := range values {
 		clear(value)
 	}
+}
+
+func containsRPCResult(messages [][]byte, requestID uint64) bool {
+	for _, message := range messages {
+		if len(message) >= 12 && binary.LittleEndian.Uint32(message[:4]) == constructorRPCResult && binary.LittleEndian.Uint64(message[4:12]) == requestID {
+			return true
+		}
+	}
+	return false
 }
 
 func containsPong(body []byte, pingID uint64) bool {

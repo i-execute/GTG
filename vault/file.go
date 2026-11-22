@@ -1,10 +1,8 @@
 package vault
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
-	"syscall"
 )
 
 func SaveFile(path string, vault *Vault, credential Credential) error {
@@ -65,26 +63,6 @@ func RotateFile(path string, oldCredential, newCredential Credential) error {
 	})
 }
 
-func withFileLock(path string, exclusive bool, fn func() error) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return err
-	}
-	lock, err := os.OpenFile(path+".lock", os.O_CREATE|os.O_RDWR, 0600)
-	if err != nil {
-		return err
-	}
-	defer lock.Close()
-	operation := syscall.LOCK_SH
-	if exclusive {
-		operation = syscall.LOCK_EX
-	}
-	if err := syscall.Flock(int(lock.Fd()), operation); err != nil {
-		return err
-	}
-	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
-	return fn()
-}
-
 func writeAtomic(path string, data []byte) error {
 	directory := filepath.Dir(path)
 	if err := os.MkdirAll(directory, 0700); err != nil {
@@ -114,15 +92,7 @@ func writeAtomic(path string, data []byte) error {
 	if err := os.Rename(temporaryPath, path); err != nil {
 		return err
 	}
-	directoryFile, err := os.Open(directory)
-	if err != nil {
-		return err
-	}
-	defer directoryFile.Close()
-	if err := directoryFile.Sync(); err != nil && !errors.Is(err, syscall.EINVAL) {
-		return err
-	}
-	return nil
+	return syncDirectory(directory)
 }
 
 func ExportPortable(vault *Vault, credential Credential) (string, error) {

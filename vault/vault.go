@@ -13,7 +13,6 @@ import (
 	"runtime"
 	"sort"
 	"sync"
-	"syscall"
 
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/pbkdf2"
@@ -142,7 +141,7 @@ func (x *Secret) LockMemory() error {
 	if x.locked {
 		return nil
 	}
-	if err := syscall.Mlock(x.data); err != nil {
+	if err := lockSecretMemory(x.data); err != nil {
 		return err
 	}
 	x.locked = true
@@ -160,7 +159,7 @@ func (x *Secret) Destroy() {
 		return
 	}
 	if x.locked {
-		_ = syscall.Munlock(x.data)
+		_ = unlockSecretMemory(x.data)
 		x.locked = false
 	}
 	clear(x.data)

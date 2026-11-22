@@ -210,6 +210,18 @@ func TestLegacyPacketRoundTripAndPongContainer(t *testing.T) {
 	box.destroy()
 }
 
+func TestRPCResultDetection(t *testing.T) {
+	message := make([]byte, 12)
+	binary.LittleEndian.PutUint32(message[:4], constructorRPCResult)
+	binary.LittleEndian.PutUint64(message[4:12], 99)
+	if !containsRPCResult([][]byte{[]byte{1, 2, 3}, message}, 99) {
+		t.Fatal("expected rpc result")
+	}
+	if containsRPCResult([][]byte{message}, 100) {
+		t.Fatal("accepted wrong request id")
+	}
+}
+
 func TestMessageIDsMonotonic(t *testing.T) {
 	ids := messageIDs{}
 	now := time.Unix(100, 1)
